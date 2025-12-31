@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-container" id="loginContainer" style="display: flex !important;">
+            <div class="login-card">
+                <h1>🎓 Attendance System</h1>
+                <div class="role-selector">
+                    <button class="role-btn active" data-role="student">Student</button>
+                    <button class="role-btn" data-role="teacher">Teacher</button>
+                    <button class="role-btn" data-role="admin">Admin</button>
+                </div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <p class="register-link">Don't have an account? <a href="#" id="showRegister">Register</a></p>
+            </div>
+
+            <div class="register-card" id="registerCard" style="display: none;">
+                <h2>Register</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="regName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" required minlength="6">
+                    </div>
+                    <div class="form-group" id="studentFields" style="display: none;">
+                        <label>Student ID <span style="color: red;">*</span></label>
+                        <input type="text" id="regStudentId" required>
+                    </div>
+                    <div class="form-group" id="studentFields2" style="display: none;">
+                        <label>Branch <span style="color: red;">*</span></label>
+                        <input type="text" id="regBranch" placeholder="e.g., CSE, ECE" required>
+                    </div>
+                    <div class="form-group" id="studentFields3" style="display: none;">
+                        <label>Semester <span style="color: red;">*</span></label>
+                        <input type="number" id="regSemester" min="1" max="8" required>
+                    </div>
+                    <div class="form-group" id="studentFields4" style="display: none;">
+                        <label>Section <span style="color: red;">*</span></label>
+                        <input type="text" id="regSection" placeholder="e.g., A, B" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+                <p class="register-link">Already have an account? <a href="#" id="showLogin">Login</a></p>
+            </div>
+        </div>
+
+        <!-- Student Dashboard -->
+        <div class="dashboard" id="studentDashboard" style="display: none !important;">
+            <nav class="navbar">
+                <h2>Student Dashboard</h2>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </nav>
+            <div class="dashboard-content">
+                <div class="card">
+                    <h3>Scan QR Code</h3>
+                    <div id="scannerContainer">
+                        <video id="video" autoplay playsinline style="width: 100%; max-width: 400px; border-radius: 8px;"></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                        <button class="btn btn-primary" onclick="startScanner()">Start Camera</button>
+                        <button class="btn btn-secondary" onclick="stopScanner()" style="display: none;" id="stopBtn">Stop Camera</button>
+                    </div>
+                    <div id="scanResult"></div>
+                </div>
+                <div class="card">
+                    <h3>My Classes</h3>
+                    <div id="studentClasses"></div>
+                </div>
+                <div class="card">
+                    <h3>Attendance History</h3>
+                    <div id="attendanceHistory"></div>
+                </div>
+                <div class="card">
+                    <h3>Statistics</h3>
+                    <div id="studentStats"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Dashboard -->
+        <div class="dashboard" id="teacherDashboard" style="display: none !important;">
+            <nav class="navbar">
+                <h2>Teacher Dashboard</h2>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </nav>
+            <div class="dashboard-content">
+                <div class="card">
+                    <h3>Create Class</h3>
+                    <form id="createClassForm">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" id="classSubject" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Branch</label>
+                            <input type="text" id="classBranch" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Semester</label>
+                            <input type="number" id="classSemester" min="1" max="8" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Section</label>
+                            <input type="text" id="classSection" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Class</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3>My Classes</h3>
+                    <div id="teacherClasses"></div>
+                </div>
+                <div class="card">
+                    <h3>Enroll Students in Class</h3>
+                    <form id="enrollStudentsForm">
+                        <div class="form-group">
+                            <label>Select Class</label>
+                            <select id="enrollClassSelect" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Students</label>
+                            <div id="studentsList" style="max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                                <p>Loading students...</p>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enroll Selected Students</button>
+                    </form>
+                    <div id="enrollResult"></div>
+                </div>
+                <div class="card">
+                    <h3>Generate QR Code</h3>
+                    <form id="generateQRForm">
+                        <div class="form-group">
+                            <label>Select Class</label>
+                            <select id="qrClassSelect" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Duration (minutes)</label>
+                            <input type="number" id="qrDuration" value="5" min="1" max="60" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Generate QR Code</button>
+                    </form>
+                    <div id="qrCodeDisplay"></div>
+                    <div id="activeSessions"></div>
+                </div>
+                <div class="card">
+                    <h3>Attendance Reports</h3>
+                    <form id="reportForm">
+                        <div class="form-group">
+                            <label>Select Class</label>
+                            <select id="reportClassSelect"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="reportStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" id="reportEndDate">
+                        </div>
+                        <button type="submit" class="btn btn-primary">View Report</button>
+                        <button type="button" class="btn btn-secondary" onclick="exportReport('xlsx')">Export Excel</button>
+                        <button type="button" class="btn btn-secondary" onclick="exportReport('csv')">Export CSV</button>
+                        <button type="button" class="btn btn-secondary" onclick="exportReport('pdf')">Export PDF</button>
+                    </form>
+                    <div id="reportResults"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div class="dashboard" id="adminDashboard" style="display: none !important;">
+            <nav class="navbar">
+                <h2>Admin Dashboard</h2>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </nav>
+            <div class="dashboard-content">
+                <div class="card">
+                    <h3>Statistics</h3>
+                    <div id="adminStats"></div>
+                </div>
+                <div class="card">
+                    <h3>User Management</h3>
+                    <button class="btn btn-primary" onclick="showCreateUserForm()">Create User</button>
+                    <div id="createUserForm" style="display: none; margin-top: 20px;">
+                        <form id="adminCreateUserForm">
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" id="adminUserName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="adminUserEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="adminUserPassword" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <select id="adminUserRole" required>
+                                    <option value="student">Student</option>
+                                    <option value="teacher">Teacher</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="adminStudentFields" style="display: none;">
+                                <label>Student ID</label>
+                                <input type="text" id="adminStudentId">
+                            </div>
+                            <div class="form-group" id="adminStudentFields2" style="display: none;">
+                                <label>Branch</label>
+                                <input type="text" id="adminBranch">
+                            </div>
+                            <div class="form-group" id="adminStudentFields3" style="display: none;">
+                                <label>Semester</label>
+                                <input type="number" id="adminSemester" min="1" max="8">
+                            </div>
+                            <div class="form-group" id="adminStudentFields4" style="display: none;">
+                                <label>Section</label>
+                                <input type="text" id="adminSection">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create User</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideCreateUserForm()">Cancel</button>
+                        </form>
+                    </div>
+                    <div id="usersList"></div>
+                </div>
+                <div class="card">
+                    <h3>All Classes</h3>
+                    <div id="allClasses"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
