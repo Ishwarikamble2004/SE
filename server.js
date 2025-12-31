@@ -20,25 +20,25 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/teacher', require('./routes/teacher'));
 app.use('/api/student', require('./routes/student'));
 
-// Serve index.html for all non-API routes (SPA routing)
+// Serve index.html for all non-API routes
 app.get('*', (req, res) => {
-  // Skip API routes
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ message: 'API route not found' });
   }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/attendance-system', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+// ✅ SINGLE, RENDER-SAFE DATABASE CONNECTION
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
+// Port (Render compatible)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
