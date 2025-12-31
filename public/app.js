@@ -551,6 +551,7 @@ async function loadActiveSessions() {
                 ${sessions.map(s => `
                     <div style="padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; margin: 10px 0;">
                         <strong>${s.classId.subject}</strong> - Expires: ${new Date(s.endTime).toLocaleString()}
+                        <button class="btn btn-secondary" onclick="viewSessionAttendance('${s._id}')" style="margin-left: 10px; width: auto; padding: 5px 15px;">View Attendance</button>
                         <button class="btn btn-danger" onclick="stopSession('${s._id}')" style="margin-left: 10px; width: auto; padding: 5px 15px;">Stop</button>
                     </div>
                 `).join('')}
@@ -558,6 +559,53 @@ async function loadActiveSessions() {
         }
     } catch (error) {
         console.error('Error loading sessions:', error);
+    }
+}
+
+// View attendance for a session
+async function viewSessionAttendance(sessionId) {
+    try {
+        const response = await fetch(`${API_BASE}/teacher/sessions/${sessionId}/attendance`, {
+            headers: getAuthHeaders()
+        });
+        const attendance = await response.json();
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center;';
+        modal.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 12px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h2>Session Attendance (${attendance.length} students)</h2>
+                <div style="margin-top: 20px;">
+                    ${attendance.length > 0 ? `
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8fafc;">
+                                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Student</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Subject</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Marked At</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${attendance.map(a => `
+                                    <tr>
+                                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${a.studentId.name} (${a.studentId.studentId || 'No ID'})</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${a.classId ? a.classId.subject : 'N/A'}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${new Date(a.markedAt).toLocaleString()}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;"><span style="color: ${a.status === 'present' ? 'green' : 'red'}">${a.status}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p>No attendance marked yet for this session.</p>'}
+                </div>
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="margin-top: 20px; width: auto; padding: 10px 20px;">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } catch (error) {
+        console.error('Error loading session attendance:', error);
+        showMessage('teacherDashboard', 'Error loading session attendance', 'error');
     }
 }
 
@@ -581,6 +629,9 @@ async function handleViewReport(e) {
     const startDate = document.getElementById('reportStartDate').value;
     const endDate = document.getElementById('reportEndDate').value;
 
+    const container = document.getElementById('reportResults');
+    container.innerHTML = '<p>Loading reports...</p>';
+
     const params = new URLSearchParams();
     if (classId) params.append('classId', classId);
     if (startDate) params.append('startDate', startDate);
@@ -590,29 +641,38 @@ async function handleViewReport(e) {
         const response = await fetch(`${API_BASE}/teacher/reports?${params}`, {
             headers: getAuthHeaders()
         });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            container.innerHTML = `<p style="color: red;">Error: ${errorData.message || 'Failed to load reports'}</p>`;
+            return;
+        }
+        
         const records = await response.json();
-        const container = document.getElementById('reportResults');
         
         if (records.length === 0) {
-            container.innerHTML = '<p>No records found.</p>';
+            container.innerHTML = '<p>No attendance records found. Make sure:<br>1. Students are enrolled in the class<br>2. QR codes have been generated and scanned<br>3. Attendance has been marked successfully</p>';
         } else {
             container.innerHTML = `
-                <table>
+                <h4>Found ${records.length} attendance record(s)</h4>
+                <table style="width: 100%; margin-top: 15px;">
                     <thead>
                         <tr>
                             <th>Student</th>
                             <th>Subject</th>
                             <th>Date</th>
+                            <th>Time</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${records.map(r => `
                             <tr>
-                                <td>${r.studentId.name} (${r.studentId.studentId})</td>
-                                <td>${r.classId.subject}</td>
+                                <td>${r.studentId ? (r.studentId.name + ' (' + (r.studentId.studentId || 'No ID') + ')') : 'Unknown'}</td>
+                                <td>${r.classId ? r.classId.subject : 'N/A'}</td>
                                 <td>${new Date(r.date).toLocaleDateString()}</td>
-                                <td>${r.status}</td>
+                                <td>${new Date(r.markedAt).toLocaleTimeString()}</td>
+                                <td><span style="color: ${r.status === 'present' ? 'green' : r.status === 'absent' ? 'red' : 'orange'}">${r.status}</span></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -621,6 +681,7 @@ async function handleViewReport(e) {
         }
     } catch (error) {
         console.error('Error loading report:', error);
+        container.innerHTML = `<p style="color: red;">Network error: ${error.message}</p>`;
     }
 }
 

@@ -330,20 +330,37 @@ router.get('/reports', async (req, res) => {
   try {
     const { classId, startDate, endDate } = req.query;
 
-    const match = {};
+    // First, get all classes belonging to this teacher
+    const teacherClasses = await Class.find({ teacherId: req.user._id }).select('_id');
+    const teacherClassIds = teacherClasses.map(c => c._id);
+
+    if (teacherClassIds.length === 0) {
+      return res.json([]); // No classes, no attendance
+    }
+
+    const match = { classId: { $in: teacherClassIds } };
+    
     if (classId) {
-      match.classId = classId;
       // Verify class belongs to teacher
       const classData = await Class.findById(classId);
       if (!classData || classData.teacherId.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
+      match.classId = classId; // Override with specific class
     }
 
     if (startDate || endDate) {
       match.date = {};
-      if (startDate) match.date.$gte = new Date(startDate);
-      if (endDate) match.date.$lte = new Date(endDate);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        match.date.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        match.date.$lte = end;
+      }
     }
 
     const attendance = await AttendanceRecord.find(match)
@@ -354,6 +371,7 @@ router.get('/reports', async (req, res) => {
 
     res.json(attendance);
   } catch (error) {
+    console.error('Reports error:', error);
     res.status(500).json({ message: 'Error fetching reports' });
   }
 });
