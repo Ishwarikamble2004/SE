@@ -86,7 +86,7 @@ router.post('/login', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Find user
     const user = await User.findOne({ email });
