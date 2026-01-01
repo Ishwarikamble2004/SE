@@ -5,6 +5,7 @@ let currentRole = 'student';
 let scannerInterval = null;
 let stream = null;
 
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -139,7 +140,7 @@ async function handleLogin(e) {
         const response = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, role: currentRole })
         });
 
         const data = await response.json();
